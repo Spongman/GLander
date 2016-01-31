@@ -1,0 +1,191 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>GLander</title>
+    <link rel="stylesheet" href="app.css" type="text/css" />
+
+	<script type="text/javascript" src="//code.jquery.com/jquery-2.2.0.min.js"></script>
+	<script type="text/javascript" src="Scripts/game-shim.js"></script>
+	<script type="text/javascript" src="GLander.js"></script>
+
+	<link href="//cdnjs.cloudflare.com/ajax/libs/noUiSlider/7.0.10/jquery.nouislider.min.css" rel="stylesheet" />
+	<script src="//cdnjs.cloudflare.com/ajax/libs/noUiSlider/7.0.10/jquery.nouislider.js"></script>
+
+</head>
+<body>
+
+	<canvas id="canvas"></canvas>
+
+	<!--
+	<img src="Untitled.png" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: .5; z-index: 2;" />
+		-->
+	<div class="info">
+		<button id="btnDraw">Draw</button>
+		<div id="playerPos"></div>
+		<div id="playerAtt"></div>
+		<!--
+		<div id="fov"></div>
+		<div id="yOffsetView"></div>
+		<hr/>
+		<div id="yOffsetCamera"></div>
+		<div id="zOffsetCamera"></div>
+			-->
+	</div>
+
+	<script>
+		var mouse = new Mouse();
+		var keys = new Keys();
+		var _pageX, _pageY;
+		var fIgnoreMoveEvent = false;
+
+		var game;
+		$(document).ready(function ()
+		{
+			var canvas = $("#canvas")[0];
+			game = new Game(canvas, mouse, keys);
+			game.Initialize().then(() =>
+			{
+				$(window).focus(function ()
+				{
+					game.Pause(false);
+
+					_pageX = _pageY = null;
+					mouse.Reset();
+					keys.reset();
+
+				}).blur(function ()
+				{
+					game.Pause(true);
+
+				}).resize(function ()
+				{
+					game.Resize();
+				});
+
+				$(document).on("fullscreenchange", function ()
+				{
+					fIgnoreMoveEvent = true;
+					document.body.requestPointerLock();
+
+				}).mousedown(function (event)
+				{
+					//console.log("down");
+					if (typeof document.body.requestPointerLock !== 'undefined')
+					{
+						fIgnoreMoveEvent = true;
+						document.body.requestPointerLock();
+					}
+					mouse.Button(event.which, true);
+					return false;
+
+				}).mouseup(function (event)
+				{
+					mouse.Button(event.which, false);
+					event.preventDefault();
+					return false;
+
+				}).mouseenter(function ()
+				{
+					_pageX = _pageY = null;
+				}).keydown(function (event)
+				{
+					if (keys.keyDown(event.keyCode))
+						event.preventDefault();
+
+					if (event.altKey && event.keyCode === 13)
+						document.body.requestFullscreen();
+
+				}).keyup(function (event)
+				{
+					keys.keyUp(event.keyCode);
+				});
+
+
+
+				$('#fov').noUiSlider({
+					start: [66],
+					range: {
+						'min': [0],
+						'max': [180]
+					}
+				}).on({
+					slide: function ()
+					{
+						game.setFov($("#fov").val());
+					}
+				});
+
+				$('#zOffsetCamera').noUiSlider({
+					start: [2],
+					range: {
+						'min': [0],
+						'max': [20]
+					}
+				}).on({
+					slide: function ()
+					{
+						game.zOffsetCamera = +$("#zOffsetCamera").val();
+					}
+				});
+
+				$('#yOffsetCamera').noUiSlider({
+					start: [2],
+					range: {
+						'min': [0],
+						'max': [7]
+					}
+				}).on({
+					slide: function ()
+					{
+						game.yOffsetCamera = +$("#yOffsetCamera").val();
+					}
+				});
+
+				$('#yOffsetView').noUiSlider({
+					start: [2],
+					range: {
+						'min': [0],
+						'max': [7]
+					}
+				}).on({
+					slide: function ()
+					{
+						game.yOffsetView = +$("#yOffsetView").val();
+					}
+				});
+
+			});
+		});
+
+		$(document.body).on("mousemove", function (event)
+		{
+			if (fIgnoreMoveEvent)
+			{
+				fIgnoreMoveEvent = false;
+				return;
+			}
+
+			var evt = event.originalEvent;
+			if (typeof (evt.movementX) !== "undefined")
+			{
+				//console.log('movementXY', evt.movementX, evt.movementY, evt);
+				mouse.Move(evt.movementX, evt.movementY);
+			}
+			else if (typeof (evt.webkitMovementX) !== "undefined")
+			{
+				//console.log('webkitMovementXY', evt.webkitMovementX, evt.webkitMovementY);
+				mouse.Move(evt.webkitMovementX, evt.webkitMovementY);
+			}
+			else if (!isNaN(_pageX))
+			{
+				//console.log('pageX', event.pageX - _pageX, event.pageY - _pageY);
+				mouse.Move(event.pageX - _pageX, event.pageY - _pageY);
+			}
+
+			_pageX = event.pageX;
+			_pageY = event.pageY;
+		});
+	</script>
+</body>
+</html>
