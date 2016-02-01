@@ -292,7 +292,7 @@ class Actor
 
 			case EngineTypes.Engine1:
 			case EngineTypes.Engine3:
-				pos.y += (heightCruise - pos.y) * 0.025;
+				pos.y += (heightCruise - pos.y) * 0.125;
 				dYaw = Math.toRadians(Util.Rand(-0.25, 0.25));
 				switch (type.Type)
 				{
@@ -437,9 +437,12 @@ class Actor
 		}
 		else
 		{
-			if (terrain.Collide(pos, type.Radius))
+			if (type.IsFriendly)
 			{
-				this._fuel = 0;
+				if (terrain.Collide(pos, type.Radius))
+				{
+					this._fuel = 0;
+				}
 			}
 		}
 
