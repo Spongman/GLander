@@ -1,18 +1,20 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="utf-8" />
-    <title>GLander</title>
-    <link rel="stylesheet" href="app.css" type="text/css" />
+	<meta charset="utf-8" />
+	<title>GLander</title>
+	<link rel="stylesheet" href="assets/app.css" type="text/css" />
 
 	<script type="text/javascript" src="//code.jquery.com/jquery-2.2.0.min.js"></script>
-	<script type="text/javascript" src="Scripts/game-shim.js"></script>
-	<script type="text/javascript" src="GLander.js"></script>
+	<script type="text/javascript" src="game-shim.js"></script>
+	<script type="text/javascript" src="Game.js"></script>
 
 	<link href="//cdnjs.cloudflare.com/ajax/libs/noUiSlider/7.0.10/jquery.nouislider.min.css" rel="stylesheet" />
 	<script src="//cdnjs.cloudflare.com/ajax/libs/noUiSlider/7.0.10/jquery.nouislider.js"></script>
 
 </head>
+
 <body>
 
 	<canvas id="canvas"></canvas>
@@ -40,64 +42,55 @@
 		var fIgnoreMoveEvent = false;
 
 		var game;
-		$(document).ready(function ()
-		{
+		$(document).ready(function () {
 			var canvas = $("#canvas")[0];
+
+			gl = initGL(canvas);
+
 			game = new Game(canvas, mouse, keys);
-			game.Initialize().then(() =>
-			{
-				$(window).focus(function ()
-				{
+			game.Initialize().then(() => {
+				$(window).focus(function () {
 					game.Pause(false);
 
 					_pageX = _pageY = null;
 					mouse.Reset();
 					keys.reset();
 
-				}).blur(function ()
-				{
+				}).blur(function () {
 					game.Pause(true);
 
-				}).resize(function ()
-				{
+				}).resize(function () {
 					game.Resize();
 				});
 
-				$(document).on("fullscreenchange", function ()
-				{
+				$(document).on("fullscreenchange", function () {
 					fIgnoreMoveEvent = true;
 					document.body.requestPointerLock();
 
-				}).mousedown(function (event)
-				{
+				}).mousedown(function (event) {
 					//console.log("down");
-					if (typeof document.body.requestPointerLock !== 'undefined')
-					{
+					if (typeof document.body.requestPointerLock !== 'undefined') {
 						fIgnoreMoveEvent = true;
 						document.body.requestPointerLock();
 					}
 					mouse.Button(event.which, true);
 					return false;
 
-				}).mouseup(function (event)
-				{
+				}).mouseup(function (event) {
 					mouse.Button(event.which, false);
 					event.preventDefault();
 					return false;
 
-				}).mouseenter(function ()
-				{
+				}).mouseenter(function () {
 					_pageX = _pageY = null;
-				}).keydown(function (event)
-				{
+				}).keydown(function (event) {
 					if (keys.keyDown(event.keyCode))
 						event.preventDefault();
 
 					if (event.altKey && event.keyCode === 13)
 						document.body.requestFullscreen();
 
-				}).keyup(function (event)
-				{
+				}).keyup(function (event) {
 					keys.keyUp(event.keyCode);
 				});
 
@@ -110,8 +103,7 @@
 						'max': [180]
 					}
 				}).on({
-					slide: function ()
-					{
+					slide: function () {
 						game.setFov($("#fov").val());
 					}
 				});
@@ -123,8 +115,7 @@
 						'max': [20]
 					}
 				}).on({
-					slide: function ()
-					{
+					slide: function () {
 						game.zOffsetCamera = +$("#zOffsetCamera").val();
 					}
 				});
@@ -136,8 +127,7 @@
 						'max': [7]
 					}
 				}).on({
-					slide: function ()
-					{
+					slide: function () {
 						game.yOffsetCamera = +$("#yOffsetCamera").val();
 					}
 				});
@@ -149,8 +139,7 @@
 						'max': [7]
 					}
 				}).on({
-					slide: function ()
-					{
+					slide: function () {
 						game.yOffsetView = +$("#yOffsetView").val();
 					}
 				});
@@ -158,27 +147,22 @@
 			});
 		});
 
-		$(document.body).on("mousemove", function (event)
-		{
-			if (fIgnoreMoveEvent)
-			{
+		$(document.body).on("mousemove", function (event) {
+			if (fIgnoreMoveEvent) {
 				fIgnoreMoveEvent = false;
 				return;
 			}
 
 			var evt = event.originalEvent;
-			if (typeof (evt.movementX) !== "undefined")
-			{
+			if (typeof (evt.movementX) !== "undefined") {
 				//console.log('movementXY', evt.movementX, evt.movementY, evt);
 				mouse.Move(evt.movementX, evt.movementY);
 			}
-			else if (typeof (evt.webkitMovementX) !== "undefined")
-			{
+			else if (typeof (evt.webkitMovementX) !== "undefined") {
 				//console.log('webkitMovementXY', evt.webkitMovementX, evt.webkitMovementY);
 				mouse.Move(evt.webkitMovementX, evt.webkitMovementY);
 			}
-			else if (!isNaN(_pageX))
-			{
+			else if (!isNaN(_pageX)) {
 				//console.log('pageX', event.pageX - _pageX, event.pageY - _pageY);
 				mouse.Move(event.pageX - _pageX, event.pageY - _pageY);
 			}
@@ -188,4 +172,5 @@
 		});
 	</script>
 </body>
+
 </html>

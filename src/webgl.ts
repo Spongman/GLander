@@ -1,41 +1,34 @@
 ﻿/// <reference path="Math.ts" />
-/// <reference path="typings/jquery/jquery.d.ts" />
+/// <reference types="jquery" />
 
-declare class WebGLDebugUtils
-{
+declare class WebGLDebugUtils {
 	static makeDebugContext(gl: WebGLRenderingContext): WebGLRenderingContext;
 }
 
-interface WebGLObject
-{
+interface WebGLObject {
 	[index: string]: any;
 }
 
-var gl: WebGLRenderingContext;
-function initGL(canvas: HTMLCanvasElement)
-{
-	try
-	{
+let gl: WebGLRenderingContext;
+function initGL(canvas: HTMLCanvasElement) {
+	try {
 		const params = { alpha: false };
-		return <WebGLRenderingContext> canvas.getContext("experimental-webgl", params);
+		return <WebGLRenderingContext>canvas.getContext("experimental-webgl", params);
 	}
-	catch (e)
-	{
-		alert(`Could not initialise WebGL: ${e}`);
+	catch (e) {
+		throw new Error(`Could not initialise WebGL: ${e}`);
 	}
 }
 
 
-function createProgram(name:string, attrs: string[], uniforms: string[])
-{
-	function getShader(id: string)
-	{
+function createProgram(name: string, attrs: string[], uniforms: string[]) {
+	function getShader(id: string) {
 		const shaderScript = <HTMLScriptElement>document.getElementById(id);
 		if (!shaderScript)
 			return;
 
-		var str = "";
-		for (var k = shaderScript.firstChild; k; k = k.nextSibling)
+		let str = "";
+		for (let k = shaderScript.firstChild; k; k = k.nextSibling)
 			if (k.nodeType === 3)
 				str += k.textContent;
 
@@ -48,14 +41,12 @@ function createProgram(name:string, attrs: string[], uniforms: string[])
 		throw new Error(`unknown shader type: ${shaderScript.type}`);
 	}
 
-	function compileShader(shaderType:number, str:string)
-	{
-		var shader = gl.createShader(shaderType);
+	function compileShader(shaderType: number, str: string) {
+		const shader = notNull(gl.createShader(shaderType));
 		gl.shaderSource(shader, str);
 		gl.compileShader(shader);
 
-		if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
-		{
+		if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
 			const error = gl.getShaderInfoLog(shader);
 			throw new Error(`Error compiling ${shaderType}:\n${error}`);
 		}
@@ -64,11 +55,10 @@ function createProgram(name:string, attrs: string[], uniforms: string[])
 	}
 
 	return $.when(
-		$.get(`Shaders/${name}.vs.glsl`),
-		$.get(`Shaders/${name}.fs.glsl`)
-	).then((vsArgs: any[], fsArgs: any[]) =>
-	{
-		const program = gl.createProgram();
+		$.get(`assets/glsl/${name}.vs.glsl`),
+		$.get(`assets/glsl/${name}.fs.glsl`)
+	).then((vsArgs: any[], fsArgs: any[]) => {
+		const program = notNull(gl.createProgram());
 		gl.attachShader(program, compileShader(gl.VERTEX_SHADER, vsArgs[0]));
 		gl.attachShader(program, compileShader(gl.FRAGMENT_SHADER, fsArgs[0]));
 		gl.linkProgram(program);
@@ -78,8 +68,7 @@ function createProgram(name:string, attrs: string[], uniforms: string[])
 
 		useProgram(program);
 
-		$.each(attrs, function (i: number, e: string): void
-		{
+		$.each(attrs, function (i: number, e: string): void {
 			const loc = gl.getAttribLocation(program, e);
 			if (!(loc >= 0))
 				throw new Error(`${name}: attribute '${e}' not found!`);
@@ -88,8 +77,7 @@ function createProgram(name:string, attrs: string[], uniforms: string[])
 			//gl.enableVertexAttribArray(loc);
 		});
 
-		$.each(uniforms, function (i: number, e: string): void
-		{
+		$.each(uniforms, function (i: number, e: string): void {
 			const loc = gl.getUniformLocation(program, e);
 			if (!loc)
 				throw new Error(`${name}: uniform '${e}' not found!`);
@@ -101,14 +89,14 @@ function createProgram(name:string, attrs: string[], uniforms: string[])
 
 }
 
-var programDouble: WebGLProgram;
-var programSingle: WebGLProgram;
-var programFlat: WebGLProgram;
-var programBillboard: WebGLProgram;
-var programBillboardX: WebGLProgram;
-var programLit: WebGLProgram;
+let programDouble: WebGLProgram;
+let programSingle: WebGLProgram;
+let programFlat: WebGLProgram;
+let programBillboard: WebGLProgram;
+let programBillboardX: WebGLProgram;
+let programLit: WebGLProgram;
 
-var rgPrograms: WebGLProgram[];
+let rgPrograms: WebGLProgram[];
 
 /**
 function initShaders()
@@ -228,7 +216,7 @@ function initShaders()
 	gl.uniform1i(programBillboard['sampPalette'], 0);
 	gl.uniform1i(programBillboard['sampTexture'], 1);
 
-	var rgBillboardVertexPositions:Vec2[] = [
+	const rgBillboardVertexPositions:Vec2[] = [
 		new Vec2(0, 0),
 		new Vec2(0, 1),
 		new Vec2(1, 1),
@@ -276,11 +264,9 @@ function initShaders()
 }
 */
 
-var _activeTexture: number;
-function bindTexture(iUnit: number, tex: WebGLTexture)
-{
-	if (_activeTexture !== iUnit)
-	{
+let _activeTexture: number;
+function bindTexture(iUnit: number, tex: WebGLTexture | null) {
+	if (_activeTexture !== iUnit) {
 		_activeTexture = iUnit;
 		gl.activeTexture(gl.TEXTURE0 + iUnit);
 	}
@@ -288,9 +274,8 @@ function bindTexture(iUnit: number, tex: WebGLTexture)
 }
 
 // create an image from an array of single-byte values
-function createTexture(iUnit: number, filter?: number)
-{
-	const texImage = gl.createTexture();
+function createTexture(iUnit: number, filter?: number) {
+	const texImage = notNull(gl.createTexture());
 	bindTexture(iUnit || 0, texImage);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter || gl.NEAREST);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter || gl.NEAREST);
@@ -299,8 +284,7 @@ function createTexture(iUnit: number, filter?: number)
 	return texImage;
 }
 
-function createBuffer(items: TypedArray, cValuesPerItem: number, flags?: number)
-{
+function createBuffer(items: TypedArray, cValuesPerItem: number, flags?: number) {
 	if (!items)
 		throw new Error("invalid item array");
 
@@ -311,7 +295,7 @@ function createBuffer(items: TypedArray, cValuesPerItem: number, flags?: number)
 	if (typeof (flags) === "undefined")
 		flags = gl.STATIC_DRAW;
 
-	const buffer = gl.createBuffer();
+	const buffer = notNull(gl.createBuffer());
 	gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 	gl.bufferData(gl.ARRAY_BUFFER, items, flags);
 	buffer['itemSize'] = cValuesPerItem;
@@ -320,13 +304,11 @@ function createBuffer(items: TypedArray, cValuesPerItem: number, flags?: number)
 	return buffer;
 }
 
-function createDynamicBuffer(rgItems: TypedArray, cValuesPerItem: number)
-{
+function createDynamicBuffer(rgItems: TypedArray, cValuesPerItem: number) {
 	return createBuffer(rgItems, cValuesPerItem, gl.DYNAMIC_DRAW);
 }
 
-function updateDynamicBuffer(buffer: WebGLBuffer, offset: number, items: Float32Array)
-{
+function updateDynamicBuffer(buffer: WebGLBuffer, offset: number, items: Float32Array) {
 	if (!buffer)
 		throw new Error("buffer");
 
@@ -342,9 +324,8 @@ function updateDynamicBuffer(buffer: WebGLBuffer, offset: number, items: Float32
 
 const _cHits = 0;
 const _cCalls = 0;
-const _mapAttribBuffers = new Array <WebGLBuffer> ();
-function loadAttribBuffer(attrib: number, buffer: WebGLBuffer, itemType:number = gl.FLOAT)
-{
+const _mapAttribBuffers = new Array<WebGLBuffer>();
+function loadAttribBuffer(attrib: number, buffer: WebGLBuffer, itemType: number = gl.FLOAT) {
 	if (typeof attrib === 'undefined')
 		throw new Error("invalid attibute");
 	if (!buffer)
@@ -371,8 +352,7 @@ function loadAttribBuffer(attrib: number, buffer: WebGLBuffer, itemType:number =
 	gl.enableVertexAttribArray(attrib);
 }
 
-function updateViewport()
-{
+function updateViewport() {
 	if (!gl)
 		return;
 
@@ -391,7 +371,7 @@ function updateViewport()
 	/**
 	const matProjection = Mat4.createPerspective(59, width / height, .01, 5000).flatten();
 
-	for (var i = rgPrograms.length; i--;)
+	for (let i = rgPrograms.length; i--;)
 	{
 		const program = rgPrograms[i];
 		gl.useProgram(program);
@@ -401,8 +381,8 @@ function updateViewport()
 	_programLast = rgPrograms[0];
 }
 
-var matModelView: Mat4;
-var rgMatrices:Mat4[] = [];
+let matModelView: Mat4;
+const rgMatrices: Mat4[] = [];
 
 /*
 function beginScene(position: Vec3, orient: Mat3)
@@ -423,7 +403,7 @@ function beginScene(position: Vec3, orient: Mat3)
 
 function createAngleMatrix(angles: Vec3, pos: Vec3)
 {
-	var mat: Mat4 = pos ? Mat4.createTranslation(pos) : null;
+	const mat: Mat4 = pos ? Mat4.createTranslation(pos) : null;
 
 	if (angles)
 	{
@@ -494,9 +474,8 @@ function popMatrix()
 }
 */
 
-var _programLast: WebGLProgram;
-function useProgram(program: WebGLProgram)
-{
+let _programLast: WebGLProgram;
+function useProgram(program: WebGLProgram) {
 	if (_programLast === program)
 		return;
 

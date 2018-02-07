@@ -1,3 +1,4 @@
+///<reference path="webgl.ts"/>
 ///<reference path="Math.ts"/>
 ///<reference path="Util.ts"/>
 
@@ -12,24 +13,26 @@
 ///<reference path="Player.ts"/>
 
 
-class Game
-{
+class Game {
 	private _content = new ContentManager();
-	private _terrain: Terrain = null;
+
+	// TODO:
+	private _terrain: Terrain = null!;
+	private _player: Player = null!;
+	private _actors: Actors = null!;
+
 	//private _vbTerrain: WebGLBuffer = null;
-	private _mxProj: Mat4 = null;
-	private _mxView: Mat4 = null;
+	private _mxProj: Mat4 = Mat4.I;
+	private _mxView: Mat4 = Mat4.I;
 
-	private _mxProjShadow: Mat4;
-	private _mxViewShadow: Mat4;
+	private _mxProjShadow: Mat4 = Mat4.I;
+	private _mxViewShadow: Mat4 = Mat4.I;
 
-	private _mxWorld: Mat4 = null;
+	private _mxWorld: Mat4 = Mat4.I;
 	private _sizeCull: Size = new Size(13, 13);
-	private _sizeTerrain: Size = null;
+	//private _sizeTerrain: Size = 0;
 
-	private _player: Player = null;
-	private _particles: Particles = null;
-	private _actors: Actors = null;
+	private _particles: Particles = new Particles();
 	private _factory = new ActorFactory();
 	private _levels = new GameLevels();
 	/**
@@ -51,9 +54,7 @@ class Game
 
 	private _shadowSize = 1024;
 
-	constructor(canvas: HTMLCanvasElement, private _mouse: Mouse, private _keys: Keys)
-	{
-		gl = initGL(canvas);
+	constructor(canvas: HTMLCanvasElement, private _mouse: Mouse, private _keys: Keys) {
 
 		const cVertexTextureUnits = gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS);
 		//console.log(cVertexTextureUnits + ' vertex texture units found');
@@ -87,7 +88,7 @@ class Game
 
 
 		// shadow render buffer
-		this._shadowRenderer = gl.createFramebuffer();
+		this._shadowRenderer = notNull(gl.createFramebuffer());
 		gl.bindFramebuffer(gl.FRAMEBUFFER, this._shadowRenderer);
 		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._shadowTexture, 0);
 
@@ -105,11 +106,10 @@ class Game
 	}
 
 	private _fPaused = false;
-	private _timePaused: number;
-	private _timeStart: number;
+	private _timePaused: number = 0;
+	private _timeStart: number = 0;
 
-	Pause(fPause: boolean)
-	{
+	Pause(fPause: boolean) {
 		if (this._fPaused === fPause)
 			return;
 
@@ -118,12 +118,10 @@ class Game
 		const timeNow = Date.now();
 		if (fPause)
 			this._timePaused = timeNow;
-		else
-		{
+		else {
 			this._timeStart -= timeNow - this._timePaused;
 
-			const update = () =>
-			{
+			const update = () => {
 				if (this._fPaused)
 					return;
 
@@ -140,14 +138,12 @@ class Game
 		}
 	}
 
-	Resize()
-	{
+	Resize() {
 		/// TODO: resize context
 		this.UpdateViewport();
 	}
 
-	private Run()
-	{
+	private Run() {
 		this.UpdateCull();
 
 		this._timeStart = Date.now();
@@ -157,8 +153,7 @@ class Game
 		this.Pause(false);
 	}
 
-	private initShaders()
-	{
+	private initShaders() {
 		return $.when(
 			createProgram(
 				"terrain",
@@ -180,8 +175,7 @@ class Game
 					"xHeightTexture",
 					"xShadowMapTexture",
 				]
-			).then((program: WebGLProgram) =>
-			{
+			).then((program: WebGLProgram) => {
 				_programTerrain = program;
 				gl.uniform1i(_programTerrain['xShadowMapTexture'], 0);
 				gl.uniform1i(_programTerrain['xHeightTexture'], 1);
@@ -200,8 +194,7 @@ class Game
 					"xWorldView",
 					"xProj",
 				]
-			).then((program: WebGLProgram) =>
-			{
+			).then((program: WebGLProgram) => {
 				_programParticles = program;
 			}),
 
@@ -219,8 +212,7 @@ class Game
 					"xLightDirection",
 					"xAlpha",
 				]
-			).then((program: WebGLProgram) =>
-			{
+			).then((program: WebGLProgram) => {
 				_programModel = program;
 				gl.uniform3f(_programModel['xLightDirection'], 0, -1, -1);
 				gl.uniform1f(_programModel['xAlpha'], 1);
@@ -237,25 +229,21 @@ class Game
 					"xPos",
 					"xTerrainTexture",
 				]
-			).then((program: WebGLProgram) =>
-			{
+			).then((program: WebGLProgram) => {
 				_programMap = program;
 				gl.uniform1i(_programMap['xTerrainTexture'], 0);
 			})
 		);
 	}
 
-	private Initialize()
-	{
-		return this.initShaders().then(() =>
-		{
+	private Initialize() {
+		return this.initShaders().then(() => {
 			//console.log('Game.Initialize');
-			this._particles = new Particles();
 
 			this.UpdateViewport();
 
 			/**
-			this._content.LoadFont("Content/Arial", font => { this._font = font; });
+			this._content.LoadFont("assets/Arial", font => { this._font = font; });
 			this._scores = new ScoreTags(this._graphics.WebGLRenderingContext, this._font);
 			*/
 
@@ -263,12 +251,10 @@ class Game
 		});
 	}
 
-	private StartWave(iLevel: number, iWave: number): void
-	{
+	private StartWave(iLevel: number, iWave: number) {
 		const level = this._levels.Levels[iLevel];
 
-		level.LoadTerrain(this._models).done(terrain =>
-		{
+		level.LoadTerrain(this._models).done(terrain => {
 			this._terrain = terrain;
 			const wave = level.Waves[iWave];
 
@@ -282,8 +268,7 @@ class Game
 		});
 	}
 
-	private LoadContent(): void
-	{
+	private LoadContent() {
 		/**
 		this._batchFont = new SpriteBatch(this._graphics.WebGLRenderingContext);
 		this._targetShadow = new RenderTarget2D(this._graphics.WebGLRenderingContext, this._shadowSize, this._shadowSize, false, 0, 0);
@@ -291,8 +276,7 @@ class Game
 		this.UpdateCull();
 	}
 
-	private UpdateViewport()
-	{
+	private UpdateViewport() {
 		const canvas = gl.canvas;
 		const width = canvas.clientWidth;
 		const height = canvas.clientHeight;
@@ -307,16 +291,14 @@ class Game
 		//this._mxProjMap = Mat4.createOrthographic2(100, 100, 200, 200, 1, 1000);
 	}
 
-	public setFov(fov: number)
-	{
+	public setFov(fov: number) {
 		const canvas = gl.canvas;
 		const width = canvas.clientWidth;
 		const height = canvas.clientHeight;
 		this._mxProj = Mat4.createPerspective(Util.ToRadians(fov), (width / height), 1, 1000);
 	}
 
-	private SetProjection(mxProj: Mat4)
-	{
+	private SetProjection(mxProj: Mat4) {
 		const elements = mxProj.flatten();
 
 		useProgram(_programParticles)
@@ -329,11 +311,10 @@ class Game
 		gl.uniformMatrix4fv(_programModel["xProj"], false, elements);
 	}
 
-	_probRain: number;
-	_probStars: number;
+	_probRain: number = 0;
+	_probStars: number = 0;
 
-	private UpdateCull(): void
-	{
+	private UpdateCull() {
 		this._probRain = Math.sqrt(this._sizeCull.Width * this._sizeCull.Height) / 4;
 		this._probStars = Math.sqrt(this._sizeCull.Width * this._sizeCull.Height) / 10;
 
@@ -341,12 +322,12 @@ class Game
 			this._terrain.UpdateCull(this._sizeCull);
 
 		/**
-		var models: Model[] = (<BaseModel[]>this._factory.Types).concat(<BaseModel[]>this._terrain.Models.Models);
-		for (var iModel = 0; iModel < models.length; ++iModel)
+		const models: Model[] = (<BaseModel[]>this._factory.Types).concat(<BaseModel[]>this._terrain.Models.Models);
+		for (let iModel = 0; iModel < models.length; ++iModel)
 		{
 			const model = models[iModel];
 			const effects = model.Effects;
-			for (var iEffect = 0; iEffect < effects.length; ++iEffect)
+			for (let iEffect = 0; iEffect < effects.length; ++iEffect)
 			{
 				const effect = effects[iEffect];
 				effect.FogStart = (2 * this._sizeCull.Height / 3 + 5);
@@ -358,8 +339,7 @@ class Game
 		this._mxProjShadow = Mat4.createOrthographic(this._sizeCull.Width, this._sizeCull.Height, 1, 100);
 	}
 
-	private Update(gameTime: number): void
-	{
+	private Update(gameTime: number) {
 		const pp = this._player.Position.add(this._player.Velocity);
 		this._player.Position = pp;
 
@@ -396,10 +376,8 @@ class Game
 		*/
 		const position = this._player.Position;
 		const velocity = this._player.Velocity;
-		if (position.y + velocity.y * 30 > 60)
-		{
-			for (var probStars = Util.Rand(this._probStars); probStars > 0; --probStars)
-			{
+		if (position.y + velocity.y * 30 > 60) {
+			for (let probStars = Util.Rand(this._probStars); probStars > 0; --probStars) {
 				if (probStars < 1 && probStars < Math.random())
 					break;
 				const pt = (position.y < 150) ? ParticleTypes.Star : ParticleTypes.TooHigh;
@@ -407,11 +385,9 @@ class Game
 				this._particles.AddParticles(pt, position2);
 			}
 		}
-		else if (position.y + velocity.y * 30 < 35)
-		{
+		else if (position.y + velocity.y * 30 < 35) {
 			const weather = (1 - Math.cos(gameTime / 20)) / 2;
-			for (var probRain = Util.Rand(this._probRain * weather); probRain > 0; --probRain)
-			{
+			for (let probRain = Util.Rand(this._probRain * weather); probRain > 0; --probRain) {
 				if (probRain < 1 && probRain < Math.random())
 					break;
 				const position3 = new Vec3(position.x + velocity.x * 30 + Util.Rand(-0.5, 0.5) * this._sizeCull.Width, position.y + Util.Rand(10, 25), position.z + velocity.z * 30 + Util.Rand(-0.5, 0.5) * this._sizeCull.Height);
@@ -448,8 +424,7 @@ class Game
 	public yOffsetCamera = 2.24;
 	public yOffsetView = 3.61;
 
-	private Draw(gameTime: number): void
-	{
+	private Draw(gameTime: number) {
 		const width = this._terrain.Size.Width;
 		const depth = this._terrain.Size.Height;
 		const position = this._player.Position;
@@ -466,8 +441,7 @@ class Game
 
 
 		const shadow = true;
-		if (shadow)
-		{
+		if (shadow) {
 			this.SetProjection(this._mxProjShadow);
 			const mxViewShadow = Mat4.createLookAt(new Vec3(position.x, 100, position.z), new Vec3(position.x, 0, position.z), Vec3.Forward);
 
@@ -518,9 +492,8 @@ class Game
 		this._particles.Draw(position, sizeCullExtra, this._terrain.Size, mxView);
 
 
-		var rgMapBackup: any[] = [];
-		for (var iActor = this._actors.ActorList.length; iActor--;)
-		{
+		const rgMapBackup: any[] = [];
+		for (let iActor = this._actors.ActorList.length; iActor--;) {
 			const actor = this._actors.ActorList[iActor];
 			const actorType = actor.Type;
 			const actorPos = actor.Position;
@@ -533,8 +506,7 @@ class Game
 
 		this._terrain.DrawMap(position);
 
-		for (var iBackup = rgMapBackup.length; iBackup--;)
-		{
+		for (let iBackup = rgMapBackup.length; iBackup--;) {
 			const backup = rgMapBackup[iBackup];
 			this._terrain.SetMapColor(backup.pos.x, backup.pos.z, backup.color);
 		}

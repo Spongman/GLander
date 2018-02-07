@@ -1,10 +1,11 @@
-﻿///<reference path="Math.ts"/>
+﻿///<reference path="webgl.ts"/>
+///<reference path="Math.ts"/>
 ///<reference path="Util.ts"/>
 ///<reference path="ContentManager.ts"/>
 //<reference path="Terrain.ts"/>
 //<reference path="Particle.ts"/>
 
-var _programModel: WebGLProgram;
+let _programModel: WebGLProgram;
 
 /*
 class Technique
@@ -47,28 +48,25 @@ class BasicEffect extends Effect
 }
 */
 
-class Mesh
-{
+class Mesh {
 	//ParentBone: any;
 	//Effects: Effect[];
 	BoundingSphere: Sphere;
-	Transformation: Mat4;
+	Transformation: Mat4 | undefined;
 
 	private _rgf: Float32Array;
-	private _vb: WebGLBuffer;
+	private _vb: WebGLBuffer | undefined;
 	private _cVertices: number;
 
-	constructor(rgVertices: number[][], rgFaces: number[][])
-	{
+	constructor(rgVertices: number[][], rgFaces: number[][]) {
 		const rgf = new Array<number>();
 
 		const rgPos = new Array<Vec3>();
 
-		var boundingSphere:Sphere = null;
+		let boundingSphere: Sphere | null = null;
 
 		const cVertices = rgVertices.length;
-		for (var iVertex = 0; iVertex < cVertices; ++iVertex)
-		{
+		for (let iVertex = 0; iVertex < cVertices; ++iVertex) {
 			const pos = Vec3.fromArray(rgVertices[iVertex]);
 			rgPos.push(pos);
 
@@ -79,19 +77,17 @@ class Mesh
 				boundingSphere = sphere;
 		}
 
-		this.BoundingSphere = boundingSphere;
+		this.BoundingSphere = notNull(boundingSphere);
 
 		const cFaces = rgFaces.length;
-		for (var iFace = 0; iFace < cFaces; ++iFace)
-		{
+		for (let iFace = 0; iFace < cFaces; ++iFace) {
 			const fd = rgFaces[iFace];
 			const color = new Color(fd[3], fd[4], fd[5]);
 
 			const plane = Plane3.fromPoints(rgPos[fd[0]], rgPos[fd[1]], rgPos[fd[2]]);
 			const normal = plane.normal;
 
-			for (var iv = 0; iv < 3; ++iv)
-			{
+			for (let iv = 0; iv < 3; ++iv) {
 				const iVertex = fd[iv];
 
 				//aPosition: vec3
@@ -110,12 +106,10 @@ class Mesh
 	}
 
 
-	Draw()
-	{
-		var vb = this._vb;
-		if (!vb)
-		{
-			vb = this._vb = gl.createBuffer();
+	Draw() {
+		let vb = this._vb;
+		if (!vb) {
+			vb = this._vb = notNull(gl.createBuffer());
 			gl.bindBuffer(gl.ARRAY_BUFFER, vb);
 			gl.bufferData(gl.ARRAY_BUFFER, this._rgf, gl.STATIC_DRAW);
 		}
@@ -124,7 +118,7 @@ class Mesh
 		gl.enableVertexAttribArray(_programModel["aPosition"]);
 		gl.vertexAttribPointer(_programModel["aPosition"], 3, gl.FLOAT, false, 9 * 4, 0 * 3 * 4);
 		gl.enableVertexAttribArray(_programModel["aNormal"]);
-		gl.vertexAttribPointer(_programModel["aNormal"]  , 3, gl.FLOAT, false, 9 * 4, 1 * 3 * 4);
+		gl.vertexAttribPointer(_programModel["aNormal"], 3, gl.FLOAT, false, 9 * 4, 1 * 3 * 4);
 		gl.enableVertexAttribArray(_programModel["aColor"]);
 		gl.vertexAttribPointer(_programModel["aColor"], 3, gl.FLOAT, false, 9 * 4, 2 * 3 * 4);
 
@@ -132,14 +126,11 @@ class Mesh
 	}
 }
 
-class Model
-{
-	constructor(public Name: string, public Meshes: Mesh[])
-	{
+class Model {
+	constructor(public Name: string, public Meshes: Mesh[]) {
 	}
 
-	Draw(matView: Mat4, pos: Vec3, rot: Mat4, alpha: number): void
-	{
+	Draw(matView: Mat4, pos: Vec3, rot: Mat4, alpha: number) {
 		gl.uniform1f(_programModel["xAlpha"], alpha);
 
 		if (alpha === 1)
@@ -147,11 +138,10 @@ class Model
 		else
 			gl.enable(gl.BLEND);
 
-		for (var iMesh = this.Meshes.length; iMesh--;)
-		{
+		for (let iMesh = this.Meshes.length; iMesh--;) {
 			const mesh = this.Meshes[iMesh];
 
-			var matWorld = Mat4.createTranslation(pos).mul(rot);
+			let matWorld = Mat4.createTranslation(pos).mul(rot);
 
 			if (mesh.Transformation)
 				matWorld = matWorld.mul(mesh.Transformation);
@@ -167,11 +157,9 @@ class Model
 	}
 }
 
-class Models
-{
-	static _mapModels: { [name: string] : Model };
-	static _cctor = (() =>
-	{
+class Models {
+	static _mapModels: { [name: string]: Model };
+	static _cctor = (() => {
 		const rgModels = [
 			new Model('Ally', [new Mesh([[0, 0, 0.875], [0.75, 0, 0], [0, 0.5, 0.375], [0, 0, 0.875], [0, 0.5, 0.375], [-0.75, 0, 0], [0, 0.5, -0.4375], [0.75, 0, 0], [0.875, 0, -0.875], [0, 0.5, -0.4375], [-0.875, 0, -0.875], [-0.75, 0, 0], [0, 0.5, 0.375], [0, 0.5, -0.4375], [-0.75, 0, 0], [0, 0.5, 0.375], [0.75, 0, 0], [0, 0.5, -0.4375], [-0.875, 0, -0.875], [0, 0.5, -0.4375], [0, -0.5, -0.5], [0, 0.5, -0.4375], [0.875, 0, -0.875], [0, -0.5, -0.5], [0.75, 0, 0], [0, -0.5, -0.5], [0.875, 0, -0.875], [-0.75, 0, 0], [-0.875, 0, -0.875], [0, -0.5, -0.5], [0, 0, 0.875], [0, -0.5, -0.5], [0.75, 0, 0], [0, 0, 0.875], [-0.75, 0, 0], [0, -0.5, -0.5]], [[0, 1, 2, 50, 200, 50], [3, 4, 5, 50, 200, 50], [6, 7, 8, 50, 100, 50], [9, 10, 11, 50, 100, 50], [12, 13, 14, 50, 150, 50], [15, 16, 17, 50, 150, 50], [18, 19, 20, 200, 50, 50], [21, 22, 23, 200, 50, 50], [24, 25, 26, 50, 150, 200], [27, 28, 29, 50, 150, 200], [30, 31, 32, 0, 200, 200], [33, 34, 35, 0, 200, 200]])]),
 			new Model('Attractor', [new Mesh([[0, 0, 1.5], [0.25, 0.625, 0.25], [-0.25, 0.625, 0.25], [0, 0, -1.5], [-0.25, 0.625, -0.25], [0.25, 0.625, -0.25], [-1.5, 0, 0], [-0.25, 0.625, 0.25], [-0.25, 0.625, -0.25], [0.25, 0.625, 0.25], [1.5, 0, 0], [0.25, 0.625, -0.25], [-1.5, 0, 0], [0, 0, 1.5], [-0.25, 0.625, 0.25], [0, 0, 1.5], [1.5, 0, 0], [0.25, 0.625, 0.25], [1.5, 0, 0], [0, 0, -1.5], [0.25, 0.625, -0.25], [0, 0, -1.5], [-1.5, 0, 0], [-0.25, 0.625, -0.25], [-0.25, 0.625, 0.25], [0.25, 0.625, 0.25], [0.25, 0.625, -0.25], [0.25, 0.625, -0.25], [-0.25, 0.625, -0.25], [-0.25, 0.625, 0.25], [0, 0, 1.5], [0, -0.625, 0], [1.5, 0, 0], [1.5, 0, 0], [0, -0.625, 0], [0, 0, -1.5], [0, 0, -1.5], [0, -0.625, 0], [-1.5, 0, 0], [-1.5, 0, 0], [0, -0.625, 0], [0, 0, 1.5]], [[0, 1, 2, 200, 200, 200], [3, 4, 5, 200, 200, 200], [6, 7, 8, 200, 200, 200], [9, 10, 11, 200, 200, 200], [12, 13, 14, 200, 50, 50], [15, 16, 17, 200, 50, 50], [18, 19, 20, 200, 50, 50], [21, 22, 23, 200, 50, 50], [24, 25, 26, 200, 50, 200], [27, 28, 29, 200, 50, 200], [30, 31, 32, 250, 150, 0], [33, 34, 35, 200, 200, 0], [36, 37, 38, 250, 150, 0], [39, 40, 41, 200, 200, 0]])]),
@@ -211,33 +199,28 @@ class Models
 		];
 
 		Models._mapModels = {};
-		for (var iModel = rgModels.length; iModel--;)
-		{
+		for (let iModel = rgModels.length; iModel--;) {
 			const model = rgModels[iModel];
 			Models._mapModels[model.Name] = model;
 		}
 
 	})();
 
-	static GetModel(name: string): Model
-	{
+	static GetModel(name: string): Model {
 		console.assert(!!Models._mapModels[name]);
 		return Models._mapModels[name];
 	}
 }
 
 
-abstract class BaseModel
-{
+abstract class BaseModel {
 	public Model: Model;
 
-	constructor(modelName: string)
-	{
+	constructor(modelName: string) {
 		this.Model = Models.GetModel(modelName);
 	}
 
-	Draw(matView: Mat4, pos: Vec3, rot: Mat4, alpha: number): void
-	{
+	Draw(matView: Mat4, pos: Vec3, rot: Mat4, alpha: number) {
 		this.Model.Draw(matView, pos, rot, alpha);
 	}
 }

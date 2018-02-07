@@ -4,60 +4,48 @@
 ///<reference path="Terrain.ts"/>
 ///<reference path="Actor.ts"/>
 
-class Mouse
-{
+class Mouse {
 	Offset = new Vec2(0, 0);
 	private _rgPressed = new Array<boolean>(4);
 
-	Move(dx:number, dy:number)
-	{
+	Move(dx: number, dy: number) {
 		this.Offset.x += dx;
 		this.Offset.y += dy;
 	}
-	Reset()
-	{
+	Reset() {
 		//console.log('Mouse.Reset');
 		this.Offset = new Vec2(0, 0);
 		this._rgPressed = new Array<boolean>(4);
 	}
-	Button(which: number, pressed: boolean)
-	{
+	Button(which: number, pressed: boolean) {
 		this._rgPressed[which] = pressed;
 	}
-	IsPressed(which: number): boolean
-	{
+	IsPressed(which: number): boolean {
 		return this._rgPressed[which];
 	}
 }
 
-class Keys
-{
+class Keys {
 	_rgKeys = new Array<boolean>();
-	keyDown(key: number)
-	{
+	keyDown(key: number) {
 		this._rgKeys[key] = true;
 	}
-	keyUp(key: number)
-	{
+	keyUp(key: number) {
 		this._rgKeys[key] = false;
 	}
-	reset()
-	{
+	reset() {
 		this._rgKeys = new Array<boolean>();
 	}
 
-	isPressed(key: number)
-	{
+	isPressed(key: number) {
 		return this._rgKeys[key] === true;
 	}
 }
 
-class Player extends Actor
-{
+class Player extends Actor {
 	private static cx = 400;
 	private static cz = 400;
-	constructor(terrain: Terrain, actorType: ActorType, private _mouse:Mouse, private _keys:Keys)
-	{
+	constructor(terrain: Terrain, actorType: ActorType, private _mouse: Mouse, private _keys: Keys) {
 		super(terrain, actorType);
 		this._position = new Vec3(128, 2.9, 128);
 
@@ -66,8 +54,7 @@ class Player extends Actor
 
 		this._mouse.Reset();
 	}
-	Update(gameTime: number, terrain: Terrain, particles: Particles, actors: Actors): void
-	{
+	Update(gameTime: number, terrain: Terrain, particles: Particles, actors: Actors) {
 		const mouse = this._mouse;
 
 		const state = mouse.Offset;
@@ -119,7 +106,7 @@ class Player extends Actor
 		*/
 
 		//$("#playerAtt").text(Math.round(state.x, 2) + ", " + Math.round(state.y, 2));
-		
+
 		state.y = Util.Limit(state.y, -Math.PI * 100, 0);
 		const pitch = -state.y / 100;
 		const yaw = -state.x / 100;
@@ -166,7 +153,7 @@ class Player extends Actor
 			terrain, particles, actors, gameTime,
 			fFire, fThrust, fLaunch,
 			-dPitch, dYaw
-			);
+		);
 
 		//this.Position.y = 10;
 	}

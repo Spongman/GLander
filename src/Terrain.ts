@@ -1,9 +1,9 @@
-var _programTerrain: WebGLProgram;
-var _programMap: WebGLProgram;
+///<reference path="webgl.ts"/>
+let _programTerrain: WebGLProgram;
+let _programMap: WebGLProgram;
 
 
-const enum TerrainTypes
-{
+const enum TerrainTypes {
 	Sea,
 	Beach,
 	Land,
@@ -11,8 +11,7 @@ const enum TerrainTypes
 	AlienBuilding
 }
 
-enum TerrainEntityTypes
-{
+enum TerrainEntityTypes {
 	None,	// 0
 	Bush,	// 1
 	Tree1,	// 2
@@ -27,50 +26,41 @@ enum TerrainEntityTypes
 	Crate	// 11
 }
 
-const enum EntityStatus
-{
+const enum EntityStatus {
 	Normal,
 	Infected,
 	Destroyed,
 };
 
-class TerrainEntity
-{
+class TerrainEntity {
 	public Status: EntityStatus = EntityStatus.Normal;
 
-	private _mxTransform: Mat4 = null;
-	get Transform(): Mat4
-	{
+	private _mxTransform: Mat4;
+	get Transform(): Mat4 {
 		return this._mxTransform;
 	}
-	constructor(public Type: TerrainEntityTypes, public Model: TerrainModel, yaw: number)
-	{
+	constructor(public Type: TerrainEntityTypes, public Model: TerrainModel, yaw: number) {
 		this._mxTransform = Mat4.createRotationY(yaw);
 	}
 }
 
-class TerrainSquare
-{
+class TerrainSquare {
 	private _fInfected = false;
-	constructor(public Type: TerrainTypes, public Height: number, public Color: Color, public Entity: TerrainEntity)
-	{
+	constructor(public Type: TerrainTypes, public Height: number, public Color: Color, public Entity: TerrainEntity | null) {
 		if (this.Height < 0)
 			this.Height = 0;
 
 		if (this.Type === TerrainTypes.Sea)
 			this._fInfected = true;
 	}
-	RemoveEntity(): void
-	{
+	RemoveEntity() {
 		this.Entity = null;
 	}
-	Infect(): boolean
-	{
+	Infect(): boolean {
 		if (this._fInfected)
 			return false;
 
-		if (this.Entity)
-		{
+		if (this.Entity) {
 			if (this.Entity.Status === EntityStatus.Normal)
 				this.Entity.Status = EntityStatus.Infected;
 		}
@@ -82,18 +72,16 @@ class TerrainSquare
 	}
 }
 
-class TerrainModel extends BaseModel
-{
+class TerrainModel extends BaseModel {
 	//private _rgModels: Model[];
 
 	public Height: number;
-	constructor(type: TerrainEntityTypes)
-	{
+	constructor(type: TerrainEntityTypes) {
 		super(TerrainEntityTypes[type]);
 
-		var zMax = Number.MIN_VALUE;
+		let zMax = Number.MIN_VALUE;
 		/*
-		for (var iMesh = 0; iMesh < model.Meshes.length; ++iMesh)
+		for (let iMesh = 0; iMesh < model.Meshes.length; ++iMesh)
 		{
 			const current = model.Meshes[iMesh];
 			const boundingSphere = current.BoundingSphere;
@@ -109,25 +97,21 @@ class TerrainModel extends BaseModel
 	}
 }
 
-class TerrainModels
-{
+class TerrainModels {
 	private _rgModels: TerrainModel[];
-	get Models(): TerrainModel[]
-	{
+	get Models(): TerrainModel[] {
 		const rgModels = new Array<TerrainModel>();
-		for (var iModel = this._rgModels.length; iModel--;)
-		{
+		for (let iModel = this._rgModels.length; iModel--;) {
 			const model = this._rgModels[iModel];
 			if (model)
 				rgModels.push(model);
 		}
 		return rgModels;
 	}
-	constructor()
-	{
-		var nMaxValue = Number.MIN_VALUE;
-		for (var val in TerrainEntityTypes)
-		{
+	constructor() {
+		let nMaxValue = Number.MIN_VALUE;
+		for (const type in TerrainEntityTypes) {
+			const val = Number(type);
 			if (isNaN(val))
 				continue;
 			if (nMaxValue < val)
@@ -136,8 +120,8 @@ class TerrainModels
 
 		this._rgModels = new Array<TerrainModel>(nMaxValue + 1);
 
-		for (var val in TerrainEntityTypes)
-		{
+		for (const type in TerrainEntityTypes) {
+			const val = Number(type);
 			if (isNaN(val) || val <= 0)
 				continue;
 
@@ -146,15 +130,13 @@ class TerrainModels
 				this._rgModels[val] = new TerrainModel(val);
 		}
 	}
-	GetModel(model: TerrainEntityTypes): TerrainModel
-	{
+	GetModel(model: TerrainEntityTypes): TerrainModel {
 		console.assert(!!this._rgModels[model]);
 		return this._rgModels[model];
 	}
 }
 
-class Terrain
-{
+class Terrain {
 	static MaxHeight = 150;
 	private _width = 0;
 	private _depth = 0;
@@ -164,22 +146,20 @@ class Terrain
 	private _texTerrain: WebGLTexture;
 	private _texHeights: WebGLTexture;
 
-	private _ibTerrain: WebGLBuffer;
+	private _ibTerrain: WebGLBuffer = null!;
 
-	private _vbPosition: WebGLBuffer;
-	private _vbTexture1: WebGLBuffer;
-	private _vbTexture2: WebGLBuffer;
+	private _vbPosition: WebGLBuffer = null!;
+	private _vbTexture1: WebGLBuffer = null!;
+	private _vbTexture2: WebGLBuffer = null!;
 
 	private _vbMapPosition: WebGLBuffer;
 
 	Size: Size;
 
-	get HeightTexture(): WebGLTexture
-	{
+	get HeightTexture(): WebGLTexture {
 		return this._texHeights;
 	}
-	constructor(imageData: ImageData, public Models: TerrainModels)
-	{
+	constructor(imageData: ImageData, public Models: TerrainModels) {
 		useProgram(_programTerrain);
 
 		const width = this._width = imageData.width;
@@ -194,12 +174,10 @@ class Terrain
 
 		const rgHeights = new Uint8Array(width * depth);
 
-		for (var x = width; x--;)
-		{
+		for (let x = width; x--;) {
 			const x2 = Util.Wrap(x + 1, width);
 
-			for (var z = depth; z--;)
-			{
+			for (let z = depth; z--;) {
 				const z2 = Util.Wrap(z + 1, depth);
 
 				const color = Color.FromArray(<any>(imageData.data), 4 * (x + z * width));
@@ -212,9 +190,8 @@ class Terrain
 				const yCenter = (y + yAdjacent) / 2;
 
 				const terrainType = Math.floor((color.B + 20) / 50);
-				var terrainColor = Color.BlueViolet;
-				switch (terrainType)
-				{
+				let terrainColor = Color.BlueViolet;
+				switch (terrainType) {
 					case TerrainTypes.Sea:
 						//terrainColor = new Color(Util.Rand(60, 100), Util.Rand(60, 100), Util.Rand(150 + yCenter, 190 + yCenter));
 						terrainColor = new Color(32, 32, Util.Rand(150 + yCenter, 190 + yCenter));
@@ -226,7 +203,7 @@ class Terrain
 						terrainColor = new Color(Util.Rand(yCenter, yCenter + 60), Util.Rand(60 + yCenter, 120 + yCenter), Util.Rand(yCenter, yCenter + 60));
 						break;
 					case TerrainTypes.LandingPad:
-						var b: number;
+						let b: number;
 						if ((z > 125 && z < 131 && (x === 125 || x === 129)) || (x > 125 && x < 129 && z === 128))
 							b = 255;
 						else
@@ -234,14 +211,13 @@ class Terrain
 						terrainColor = new Color(b, b, b);
 						break;
 					case TerrainTypes.AlienBuilding:
-						terrainColor = new Color(Math.min(yCenter + 128, 250),Math.min(yCenter + Util.Rand(32, 128), 250),Math.min(yCenter + 128, 250));
+						terrainColor = new Color(Math.min(yCenter + 128, 250), Math.min(yCenter + Util.Rand(32, 128), 250), Math.min(yCenter + 128, 250));
 						break;
 				}
 
-				var entity: TerrainEntity = null;
+				let entity: TerrainEntity | null = null;
 				const terrainEntityTypes = Math.floor((color.R + TerrainEntityTypes.Rocket) / 20);
-				if (terrainEntityTypes !== TerrainEntityTypes.None)
-				{
+				if (terrainEntityTypes !== TerrainEntityTypes.None) {
 					const model = this.Models.GetModel(terrainEntityTypes);
 					const yaw = (terrainEntityTypes === TerrainEntityTypes.Rocket) ? 0 : Util.Rand(Util.TwoPI);
 					entity = new TerrainEntity(terrainEntityTypes, model, yaw);
@@ -269,8 +245,7 @@ class Terrain
 		this._vbMapPosition = createBuffer(rgFMapPositions, 2);
 	}
 
-	UpdateCull(sizeCull: Size): void
-	{
+	UpdateCull(sizeCull: Size) {
 		useProgram(_programTerrain);
 
 		const cxCull = sizeCull.Width;
@@ -282,23 +257,21 @@ class Terrain
 		const rgfTexture1 = new Float32Array(cVerticesTerrain * 2);
 		const rgfTexture2 = new Float32Array(cVerticesTerrain * 2);
 
-		var iQuad = 0;
-		for (var oz = 0; oz < czCull; ++oz)
-		{
+		let iQuad = 0;
+		for (let oz = 0; oz < czCull; ++oz) {
 			const z = oz - Math.floor(czCull / 2);
 			const v1 = (z + 0.5);// / this._depth;
 			const v2 = (z + 1.5);// / this._depth;
-			for (var ox = 0; ox < cxCull; ++ox)
-			{
+			for (let ox = 0; ox < cxCull; ++ox) {
 				const x = ox - Math.floor(cxCull / 2);
 				const u1 = (x + 0.5);// / this._width;
 				const u2 = (x + 1.5);// / this._width;
 
-				new Vec2(x - 0, z - 0).writeTo(rgfPosition, iQuad * 4 + 0); 
-				new Vec2(x - 0, z + 1).writeTo(rgfPosition, iQuad * 4 + 1); 
-				new Vec2(x + 1, z - 0).writeTo(rgfPosition, iQuad * 4 + 2); 
-				new Vec2(x + 1, z + 1).writeTo(rgfPosition, iQuad * 4 + 3); 
-				
+				new Vec2(x - 0, z - 0).writeTo(rgfPosition, iQuad * 4 + 0);
+				new Vec2(x - 0, z + 1).writeTo(rgfPosition, iQuad * 4 + 1);
+				new Vec2(x + 1, z - 0).writeTo(rgfPosition, iQuad * 4 + 2);
+				new Vec2(x + 1, z + 1).writeTo(rgfPosition, iQuad * 4 + 3);
+
 				new Vec2(u1, v1).writeTo(rgfTexture1, iQuad * 4 + 0);
 				new Vec2(u1, v2).writeTo(rgfTexture1, iQuad * 4 + 1);
 				new Vec2(u2, v1).writeTo(rgfTexture1, iQuad * 4 + 2);
@@ -326,11 +299,9 @@ class Terrain
 
 
 		const rgIndices = new Uint16Array(cxCull * czCull * 6);
-		var iIndex2 = 0;
-		for (var x = 0; x < cxCull; ++x)
-		{
-			for (var z = 0; z < czCull; ++z)
-			{
+		let iIndex2 = 0;
+		for (let x = 0; x < cxCull; ++x) {
+			for (let z = 0; z < czCull; ++z) {
 				const iVertex = (x + z * cxCull) * 4;
 				rgIndices[iIndex2++] = iVertex;
 				rgIndices[iIndex2++] = (iVertex + 2);
@@ -343,7 +314,7 @@ class Terrain
 
 		if (this._ibTerrain)
 			gl.deleteBuffer(this._ibTerrain);
-		this._ibTerrain = gl.createBuffer();
+		this._ibTerrain = notNull(gl.createBuffer());
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._ibTerrain);
 		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, rgIndices, gl.STATIC_DRAW);
 
@@ -351,8 +322,7 @@ class Terrain
 		gl.uniform2f(_programTerrain["xCullSize"], cxCull, czCull);
 	}
 
-	DrawMap(position: Vec3): void
-	{
+	DrawMap(position: Vec3) {
 		useProgram(_programMap);
 
 		gl.disable(gl.DEPTH_TEST);
@@ -379,8 +349,7 @@ class Terrain
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 	}
 
-	Draw(position: Vec3, gameTime: number, sizeCull: Size, matWorld: Mat4, matView: Mat4): void
-	{
+	Draw(position: Vec3, gameTime: number, sizeCull: Size, matWorld: Mat4, matView: Mat4) {
 		useProgram(_programTerrain);
 
 		const cxCull = sizeCull.Width;
@@ -420,8 +389,7 @@ class Terrain
 	}
 
 
-	DrawModels(sizeCull: Size, mxView: Mat4, gameTime: number, pos: Vec3): void
-	{
+	DrawModels(sizeCull: Size, mxView: Mat4, gameTime: number, pos: Vec3) {
 		useProgram(_programModel);
 
 		gl.enable(gl.CULL_FACE);
@@ -433,11 +401,9 @@ class Terrain
 		const pz = Math.floor(pos.z);
 		const dx = pos.x - px;
 		const dz = pos.z - pz;
-		for (var ox = sizeCull.Width + 1; ox--;)
-		{
+		for (let ox = sizeCull.Width + 1; ox--;) {
 			const x = px + ox - Math.floor(sizeCull.Width / 2);
-			for (var oz = sizeCull.Height + 1; oz--;)
-			{
+			for (let oz = sizeCull.Height + 1; oz--;) {
 				const z = pz + oz - Math.floor(sizeCull.Height / 2);
 				const terrainSquare = this.SquareAt(x, z);
 				const entity = terrainSquare.Entity;
@@ -447,7 +413,7 @@ class Terrain
 				if (entity.Status === EntityStatus.Destroyed)
 					continue;	// TODO: render destroyed state
 
-				var alpha = 1;
+				let alpha = 1;
 				if (ox === 0)
 					alpha = 1 - dx;
 				else if (ox === sizeCull.Width)
@@ -458,10 +424,9 @@ class Terrain
 				else if (oz === sizeCull.Height)
 					alpha *= dz;
 
-				var matrix = entity.Transform;
+				let matrix = entity.Transform;
 				const terrainEntityType = entity.Type;
-				switch (terrainEntityType)
-				{
+				switch (terrainEntityType) {
 					case TerrainEntityTypes.Bush:
 					case TerrainEntityTypes.Tree1:
 					case TerrainEntityTypes.Tree2:
@@ -483,12 +448,11 @@ class Terrain
 	}
 
 
-	SetMapColor(x: number, z: number, color: Color): void
-	{
+	SetMapColor(x: number, z: number, color: Color) {
 		x = Math.floor(x);
 		z = Math.floor(z);
 
-		var ip = 4 * (x + z * this._width);
+		let ip = 4 * (x + z * this._width);
 		this._rgPixelsTerrain[ip++] = color.R;
 		this._rgPixelsTerrain[ip++] = color.G;
 		this._rgPixelsTerrain[ip++] = color.B;
@@ -497,12 +461,11 @@ class Terrain
 		this._fTerrainDirty = true;
 	}
 
-	GetMapColor(x: number, z: number): Color
-	{
+	GetMapColor(x: number, z: number): Color {
 		x = Math.floor(x);
 		z = Math.floor(z);
 
-		var ip = 4 * (x + z * this._width);
+		let ip = 4 * (x + z * this._width);
 		return new Color(
 			this._rgPixelsTerrain[ip++],
 			this._rgPixelsTerrain[ip++],
@@ -510,10 +473,8 @@ class Terrain
 		);
 	}
 
-	GetTerrainTexture(): WebGLTexture
-	{
-		if (this._fTerrainDirty)
-		{
+	GetTerrainTexture(): WebGLTexture {
+		if (this._fTerrainDirty) {
 			bindTexture(2, this._texTerrain);
 			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this._width, this._depth, 0, gl.RGBA, gl.UNSIGNED_BYTE, <ArrayBufferView>this._rgPixelsTerrain);
 			this._fTerrainDirty = false;
@@ -531,10 +492,8 @@ class Terrain
 		gl.SamplerStates[0] = samplerState;
 	}
 	*/
-	Infect(x: number, z: number, range?: number): void
-	{
-		if (typeof (range) === 'undefined')
-		{
+	Infect(x: number, z: number, range?: number) {
+		if (typeof (range) === 'undefined') {
 			if (Math.random() < .5)
 				return;
 			x = Util.Wrap(x, this._width);
@@ -543,24 +502,20 @@ class Terrain
 			if (terrainSquare.Infect())
 				this.SetMapColor(x, z, terrainSquare.Color);
 		}
-		else
-		{
-			for (var ox = x - range; ox <= x + range; ++ox)
-				for (var oz = z - range; oz <= z + range; ++oz)
+		else {
+			for (let ox = x - range; ox <= x + range; ++ox)
+				for (let oz = z - range; oz <= z + range; ++oz)
 					this.Infect(ox, oz);
 		}
 	}
 
-	HideRadar(x: number, z: number): void
-	{
+	HideRadar(x: number, z: number) {
 		x = Math.floor(x);
 		z = Math.floor(z);
 
-		for (var dx = -15; dx <= 15; ++dx)
-		{
+		for (let dx = -15; dx <= 15; ++dx) {
 			const wx = Util.Wrap(x + dx, this._width);
-			for (var dz = -15; dz <= 15; ++dz)
-			{
+			for (let dz = -15; dz <= 15; ++dz) {
 				const wz = Util.Wrap(z + dz, this._depth);
 
 				this._rgPixelsTerrain[4 * (wx + wz * this._width) + 3] = 0;
@@ -568,20 +523,17 @@ class Terrain
 		}
 	}
 
-	SquareAt(x: number, z: number): TerrainSquare
-	{
+	SquareAt(x: number, z: number): TerrainSquare {
 		x = Util.Wrap(Math.floor(x), this._width);
 		z = Util.Wrap(Math.floor(z), this._depth);
 		return this._rgSquares[x + z * this._width];
 	}
 
-	HeightAt(x: any, z: any): number
-	{
+	HeightAt(x: any, z: any): number {
 		return this.SquareAt(x, z).Height;
 	}
 
-	HeightAtExact(x: number, z: number): number
-	{
+	HeightAtExact(x: number, z: number): number {
 		const x1 = Math.floor(x);
 		const z1 = Math.floor(z);
 		const dx = x - x1;
@@ -591,27 +543,23 @@ class Terrain
 		const z2 = z1 + 1;
 		const y2 = this.HeightAt(x2, z2);
 
-		if (dx > dz)
-		{
+		if (dx > dz) {
 			const height = this.HeightAt(x2, z1);
 			return Math.barycentric(height, y1, y2, 1 - dx, dz);
 		}
-		else
-		{
+		else {
 			const height = this.HeightAt(x1, z2);
 			return Math.barycentric(height, y1, y2, 1 - dz, dx);
 		}
 	}
 
-	Wrap(position: Vec3): Vec3
-	{
+	Wrap(position: Vec3): Vec3 {
 		return new Vec3(Util.Wrap(position.x, this._width), position.y, Util.Wrap(position.z, this._depth));
 	}
-	Distance2(pos1: Vec3, pos2: Vec3): number
-	{
-		var dx = pos1.x - pos2.x;
-		var dy = pos1.y - pos2.y;
-		var dz = pos1.z - pos2.z;
+	Distance2(pos1: Vec3, pos2: Vec3): number {
+		let dx = pos1.x - pos2.x;
+		let dy = pos1.y - pos2.y;
+		let dz = pos1.z - pos2.z;
 
 		if (dx < 0)
 			dx = -dx;
@@ -626,16 +574,13 @@ class Terrain
 		return dx * dx + dy * dy + dz * dz;
 	}
 
-	Collide(pos: Vec3, radius:number = 0): boolean
-	{
+	Collide(pos: Vec3, radius: number = 0): boolean {
 		const terrainSquare = this.SquareAt(pos.x + .5, pos.z + .5);	// offset because entities are aligned with corner, not center of square
 		const entity = terrainSquare.Entity;
-		if (entity && entity.Model && entity.Status !== EntityStatus.Destroyed)
-		{
+		if (entity && entity.Model && entity.Status !== EntityStatus.Destroyed) {
 			const groundHeight = terrainSquare.Height;
 			const entityHeight = entity.Model.Height;
-			if (pos.y - radius < groundHeight + entityHeight)
-			{
+			if (pos.y - radius < groundHeight + entityHeight) {
 				if (entity.Type === TerrainEntityTypes.Radar)
 					this.HideRadar(pos.x, pos.z);
 

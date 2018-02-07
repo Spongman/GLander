@@ -1,9 +1,7 @@
 ﻿
 
-class ContentManager
-{
-	LoadModel(path: string, callback: (model:Model)=>void):void
-	{
+class ContentManager {
+	LoadModel(path: string, callback: (model: Model) => void) {
 	}
 
 	/*

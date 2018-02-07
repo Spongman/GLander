@@ -1,43 +1,44 @@
+///<reference path="webgl.ts"/>
 ///<reference path="Math.ts"/>
 ///<reference path="Util.ts"/>
 ///<reference path="Terrain.ts"/>
 ///<reference path="Actor.ts"/>
 
-class Texture2D
-{
+let _programBillboards: WebGLProgram;
+
+class Texture2D {
 }
 
-class ScoreTag
-{
-	private _tex: Texture2D = null;
-	private _position: Vec3 = null;
-	private _velocity: Vec3 = null;
+class ScoreTag {
+	private _tex: Texture2D;
+	private _position: Vec3;
+	private _velocity: Vec3;
 	private _life = 0;
-	get Position(): Vec3
-	{
+	get Position(): Vec3 {
 		return this._position;
 	}
-	get Texture(): Texture2D
-	{
+	get Texture(): Texture2D {
 		return this._tex;
 	}
-	Initialize(texture: Texture2D, position: Vec3, velocity: Vec3): void
-	{
+	constructor(texture: Texture2D, position: Vec3, velocity: Vec3) {
 		this._tex = texture;
 		this._position = position;
 		this._velocity = velocity;
 		this._life = 1;
 	}
-	Update(terrain: Terrain): boolean
-	{
+	Initialize(texture: Texture2D, position: Vec3, velocity: Vec3) {
+		this._tex = texture;
+		this._position = position;
+		this._velocity = velocity;
+		this._life = 1;
+	}
+	Update(terrain: Terrain): boolean {
 		this._life = this._life - 0.02;
-		var result: boolean;
-		if (this._life <= 0)
-		{
+		let result: boolean;
+		if (this._life <= 0) {
 			result = false;
 		}
-		else
-		{
+		else {
 			this._velocity.y = this._velocity.y + 0.0045;
 			this._position = terrain.Wrap(this._position.add(this._velocity));
 			result = true;
@@ -45,8 +46,7 @@ class ScoreTag
 		return result;
 	}
 }
-class ScoreTags
-{
+class ScoreTags {
 	_rgScoreTags = new Array<ScoreTag>();
 	_rgFree = new Array<ScoreTag>();
 	_rgV: ScoreTags_ParticleVertex[] = new Array<ScoreTags_ParticleVertex>(6);
@@ -59,11 +59,10 @@ class ScoreTags
 	_vbSize: WebGLBuffer;
 	_ibTerrain: WebGLBuffer;
 
-	constructor()
-	{
+	constructor() {
 		//this._font = font;
 
-		var ctx = this._ctx = document.createElement("canvas").getContext("2d");
+		const ctx = this._ctx = notNull(document.createElement("canvas").getContext("2d"));
 		ctx.font = `{this._height}px monospace`;
 		ctx.textAlign = "left";
 		ctx.textBaseline = "bottom";
@@ -72,34 +71,29 @@ class ScoreTags
 
 		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-		var widths = [];
-		var offsets = [];
-		var offset = 0;
-		for (var i = 0; i < 10; i++)
-		{
-			var str = String.fromCharCode("0".charCodeAt(0) + i);
-			var width = ctx.measureText(str).width;
+		const widths = [];
+		const offsets = [];
+		let offset = 0;
+		for (let i = 0; i < 10; i++) {
+			const str = String.fromCharCode("0".charCodeAt(0) + i);
+			const width = ctx.measureText(str).width;
 			widths[i] = width;
 			offsets[i] = offset;
 			offset += width + 1;
 		}
 
-		for (var row = 0; row < 2; row++)
-		{
-			var color = row == 0 ? Color.White : Color.Red;
+		for (let row = 0; row < 2; row++) {
+			const color = row == 0 ? Color.White : Color.Red;
 			ctx.fillStyle = `rgba(${color.R},${color.G},${color.B},${color.A / 255})`;
 
-			for (var i = 0; i < 10; i++)
-			{
-				var str = String.fromCharCode("0".charCodeAt(0) + i);
+			for (let i = 0; i < 10; i++) {
+				const str = String.fromCharCode("0".charCodeAt(0) + i);
 				ctx.fillText(str, offsets[i], row * this._height);
 			}
 		}
 
-		for (var iVertex = 0; iVertex < 6; ++iVertex)
-		{
-			switch (iVertex % 6)
-			{
+		for (let iVertex = 0; iVertex < 6; ++iVertex) {
+			switch (iVertex % 6) {
 				case 0:
 					this._rgV[iVertex].TextureCoords = Vec2.Zero;
 					break;
@@ -117,25 +111,27 @@ class ScoreTags
 			}
 		}
 	}
-	AddScoreTag(score: number, position: Vec3, velocity: Vec3): void
-	{
-		var scoreTag = (this._rgFree.length > 0) ? this._rgFree.pop() : new ScoreTag();
-		var scoreTexture = this.GetScoreTexture(score);
-		scoreTag.Initialize(scoreTexture, position, velocity);
+	AddScoreTag(score: number, position: Vec3, velocity: Vec3) {
+		const scoreTexture = this.GetScoreTexture(score);
+		let scoreTag: ScoreTag;
+		if (this._rgFree.length > 0) {
+			scoreTag = notNull(this._rgFree.pop());
+			scoreTag.Initialize(scoreTexture, position, velocity);
+		}
+		else {
+			scoreTag = new ScoreTag(scoreTexture, position, velocity);
+		}
 		this._rgScoreTags.push(scoreTag);
 	}
-	Update(terrain: Terrain, actors: Actors): void
-	{
-		for (var iTag = 0; iTag < this._rgScoreTags.length; ++iTag)
-		{
-			var scoreTag = this._rgScoreTags[iTag];
+	Update(terrain: Terrain, actors: Actors) {
+		for (let iTag = 0; iTag < this._rgScoreTags.length; ++iTag) {
+			const scoreTag = this._rgScoreTags[iTag];
 			console.assert(scoreTag !== null);
 			if (!scoreTag.Update(terrain))
 				this.RemoveAt(iTag--);
 		}
 	}
-	Draw(minX: number, maxX: number, minZ: number, maxZ: number, width: number, height: number): void
-	{
+	Draw(minX: number, maxX: number, minZ: number, maxZ: number, width: number, height: number) {
 		useProgram(_programBillboards);
 
 		//const width = sizeTerrain.Width;
@@ -156,8 +152,7 @@ class ScoreTags
 		const rgfPosition = <Float32Array>this._vbPosition["items"];
 		const rgfSize = <Float32Array>this._vbSize["items"];
 
-		for (var iTag = 0; iTag < this._rgScoreTags.length; ++iTag)
-		{
+		for (let iTag = 0; iTag < this._rgScoreTags.length; ++iTag) {
 			const scoreTag = this._rgScoreTags[iTag];
 			console.assert(scoreTag !== null);
 
@@ -176,9 +171,9 @@ class ScoreTags
 			pos.writeTo(rgfPosition, 3);
 
 			rgfSize[0] =
-			rgfSize[1] =
-			rgfSize[2] =
-			rgfSize[3] = scoreTag.Size;
+				rgfSize[1] =
+				rgfSize[2] =
+				rgfSize[3] = scoreTag.Size;
 
 			updateDynamicBuffer(this._vbPosition, 0, rgfPosition);
 			updateDynamicBuffer(this._vbSize, 0, rgfSize);
@@ -190,8 +185,7 @@ class ScoreTags
 		gl.disableVertexAttribArray(_programBillboards["aSize"]);
 	}
 
-	RemoveAt(i: number): void
-	{
+	RemoveAt(i: number) {
 		this._rgFree.push(this._rgScoreTags[i]);
 		this._rgScoreTags[i] = this._rgScoreTags.pop();
 	}

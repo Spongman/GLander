@@ -4,49 +4,38 @@
 ///<reference path="Terrain.ts"/>
 ///<reference path="ContentManager.ts"/>
 
-class Wave
-{
-	constructor(private _rgcActors: number[])
-	{
+class Wave {
+	constructor(private _rgcActors: number[]) {
 	}
-	GetActors(terrain: Terrain, factory: ActorFactory): Actor[]
-	{
-		const rgActors = new Array<Actor> ();
-		for (var iActorType = this._rgcActors.length; iActorType--;)
-		{
-			const actorType = <ActorTypes> iActorType;
+	GetActors(terrain: Terrain, factory: ActorFactory): Actor[] {
+		const rgActors = new Array<Actor>();
+		for (let iActorType = this._rgcActors.length; iActorType--;) {
+			const actorType = <ActorTypes>iActorType;
 			const cActors = this._rgcActors[iActorType];
-			for (var iActor = cActors; iActor--;)
+			for (let iActor = cActors; iActor--;)
 				rgActors.push(factory.CreateActor(terrain, actorType));
 		}
 		return rgActors;
 	}
 }
 
-class Level
-{
-	get Waves(): Wave[]
-	{
+class Level {
+	get Waves(): Wave[] {
 		return this._rgWaves;
 	}
-	get Name(): string
-	{
+	get Name(): string {
 		return this._strMapName;
 	}
-	constructor(private _strMapName: string, private _rgWaves: Wave[])
-	{
+	constructor(private _strMapName: string, private _rgWaves: Wave[]) {
 	}
-	LoadTerrain(models:TerrainModels)
-	{
-		return Util.LoadImageData(`Content/maps/${this._strMapName}.png`).then(imageData =>
-		{
+	LoadTerrain(models: TerrainModels) {
+		return Util.LoadImageData(`assets/maps/${this._strMapName}.png`).then(imageData => {
 			return new Terrain(imageData, models);
 		});
 	}
 }
 
-class GameLevels
-{
+class GameLevels {
 	Levels: Level[] = [
 		new Level("Level1", [
 			//new Wave([0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),

@@ -1,20 +1,15 @@
 ///<reference path="Math.ts"/>
 
-class Entity
-{
-	get X(): number
-	{
+class Entity {
+	get X(): number {
 		return this.Position.x;
 	}
-	get Y(): number
-	{
+	get Y(): number {
 		return this.Position.y;
 	}
-	get Z(): number
-	{
+	get Z(): number {
 		return this.Position.z;
 	}
-	constructor(public Position: Vec3)
-	{
+	constructor(public Position: Vec3) {
 	}
 }
